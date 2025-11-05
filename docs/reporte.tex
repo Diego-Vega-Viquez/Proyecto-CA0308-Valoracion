@@ -1,0 +1,98 @@
+\documentclass{article} % A4 paper and 11pt font size
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% PAQUETES            											    %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage[spanish]{babel}
+\linespread{1} % Interlineado
+\usepackage[utf8]{inputenc} % Para poner notas al pie
+\usepackage[hidelinks]{hyperref}
+\usepackage{diegocon}
+\usetikzlibrary{arrows.meta, positioning}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Comandos          									  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\yo}{Diego Alberto Vega Víquez}
+\newcommand{\yoCorto}{Diego Vega V.}
+\newcommand{\profesor}{Laura Campos Quezada}
+\newcommand{\curso}{Valoración de Instrumentos Financieros I}
+\newcommand{\siglaCurso}{CA-0308}
+\newcommand{\tarea}{Tarea \#6}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Formateo de página            									  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% ------------------ MÁRGENES ------------------
+\geometry{
+    left=2.5cm,
+    right=2.5cm,
+    top=2.5cm,
+    bottom=2.5cm
+}
+
+% ------------------ ENCABEZADOS PERSONALIZADOS ------------------
+\fancypagestyle{miestilo}{ 
+    \fancyhf{} 
+    \fancyhead[C]{Proyecto Final}
+    \fancyhead[R]{\siglaCurso}
+    \fancyfoot[L]{Prof. \profesor}
+    \fancyfoot[R]{\thepage}
+}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+
+    {\Large\bfseries Universidad de Costa Rica\par}
+    \vspace{0.5cm}
+    {\Large Escuela de Matemática\par}
+    
+    \vspace{2cm}
+    
+    {\Huge\bfseries Proyecto Final\par}
+    \vspace{0.5cm}
+    {\LARGE\siglaCurso : \curso\par}
+    
+    \vspace{2.5cm}
+    
+    {\large Elaborado por:\par}
+    \vspace{0.5cm}
+    {\normalsize José Carlos Quintero Cedeño\par}
+    {\normalsize José Andrey Prado Rojas\par}
+    {\normalsize Gabriel Esteban Valverde Guzmán\par}
+    {\normalsize \yo\par}
+
+    \vspace{1.5cm}
+    
+    {\large Profesora:\par}
+    \vspace{0.3cm}
+    {\normalsize \profesor\par}
+    
+    \vfill
+    
+    {\normalsize \today\par}
+\end{titlepage}
+
+\clearpage
+\begingroup
+\begin{spacing}{1.05} % Aquí defines el interlineado
+\fontsize{12pt}{15pt}\selectfont
+
+\tableofcontents
+
+\end{spacing}
+\endgroup
+\clearpage 
+
+\newpage
+
+\pagestyle{miestilo}
+
+\section{Introducción}
+
+\end{document}
