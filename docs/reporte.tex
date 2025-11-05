@@ -36,6 +36,7 @@
 % ------------------ ENCABEZADOS PERSONALIZADOS ------------------
 \fancypagestyle{miestilo}{ 
     \fancyhf{} 
+    \fancyhead[L]{Grupo 2}
     \fancyhead[C]{Proyecto Final}
     \fancyhead[R]{\siglaCurso}
     \fancyfoot[L]{Prof. \profesor}
@@ -44,6 +45,7 @@
 
 \begin{document}
 
+% ------------------ PORTADA DEL DOCUMENTO ------------------
 \begin{titlepage}
     \centering
     \vspace*{1cm}
@@ -60,7 +62,7 @@
     
     \vspace{2.5cm}
     
-    {\large Elaborado por:\par}
+    {\large Grupo 2\par}
     \vspace{0.5cm}
     {\normalsize José Carlos Quintero Cedeño\par}
     {\normalsize José Andrey Prado Rojas\par}
@@ -93,6 +95,57 @@
 
 \pagestyle{miestilo}
 
+------------ RESUMEN ----------------
+\section*{Resumen}
+Breve descripción del propósito del informe, los métodos empleados (simulación de Monte Carlo y árboles binomiales), los resultados generales y conclusiones clave.
+
+\newpage
+
+% ---------------- INTRODUCCIÓN ----------------
 \section{Introducción}
+Describa el contexto institucional de Smart Investments S.A., los objetivos del análisis y la motivación de diversificar la cartera.
+Mencione el propósito general del proyecto: evaluar la valoración y el riesgo del portafolio mediante simulación y analizar el impacto de una expansión accionaria.
+
+% ---------------- METODOLOGÍA ----------------
+\section{Metodología}
+Explique la construcción de los modelos binomiales conjuntos para colones y dólares, la generación de 10,000 simulaciones de Monte Carlo y los cálculos de VaR y CVaR.
+Incluya ecuaciones relevantes:
+\[
+FX(VaR_p) = \Pr[X \leq VaR_p] = p
+\]
+\[
+CVaR_p(X) = E[X \mid X \geq VaR_p]
+\]
+
+% ---------------- RESULTADOS ----------------
+\section{Resultados}
+\subsection{Sección I: Valoración del portafolio}
+Presente los valores esperados, pesimistas y optimistas del portafolio en los horizontes de 0, 3, 6, 12 y 15 años.
+Incluya tablas y gráficos por moneda (colones y dólares).
+
+\subsection{Sección II: Análisis de expansión accionaria}
+Analice los resultados numéricos al año 15 bajo las estrategias: compra directa, forward, futuro, call europea y call americana.
+Compare los valores finales del portafolio y comente las diferencias en riesgo y retorno.
+
+% ---------------- CONCLUSIONES Y RECOMENDACIONES ----------------
+\section{Conclusiones y recomendaciones}
+Sintetice los principales hallazgos, conclusiones sobre el riesgo del portafolio y recomendaciones sobre la estrategia óptima para Smart Investments.
+
+% ---------------- REFERENCIAS ----------------
+\section*{Referencias}
+\begin{itemize}
+    \item Curvas Cero Cupón (Excel proporcionado por el curso)
+    \item Material de clase: Valoración de Instrumentos Financieros I, II ciclo 2025
+    \item Notas técnicas y bibliografía complementaria (Hull, Wilmott, etc.)
+\end{itemize}
+
+% ---------------- ANEXOS ----------------
+\appendix
+\section{Código fuente y simulaciones}
+Incluya los scripts de R/Python o capturas de los resultados del notebook.
+\section{Tablas adicionales}
+Gráficos, distribuciones y comparaciones detalladas.
+
+\end{document}
 
 \end{document}
