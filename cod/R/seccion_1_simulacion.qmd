@@ -58,7 +58,8 @@ bc_crc_cup_x_ano <- c(6, 3, 1)
 bc_crc_cupones <- c(0.04, 0.06, 0.085)
 bc_crc_venc <- c(144, 180, 216)
 bc_crc_valor <- rep(22000000, length(bc_crc_venc))
-bc_crc_cupon_x_periodo <- (bc_crc_cupones / bc_crc_cup_x_ano) * bc_crc_valor
+bc_crc_freq_meses <- 12 / bc_crc_cup_x_ano
+bc_crc_cup_periodo <- (bc_crc_cupones / bc_crc_cup_x_ano) * bc_crc_valor
 ```
 
 - **Acciones Locales**: 550 acciones de Nacional de Energía S.A., con precio actual de $25.000$ colones por acción.
@@ -84,7 +85,8 @@ bc_dol_cup_x_ano <- 2
 bc_dol_cupones <- 0.04
 bc_dol_venc <- 192
 bc_dol_valor <- 25000
-bc_dol_cupon_x_periodo <- (bc_dol_cupones / bc_dol_cup_x_ano) * bc_dol_valor
+bc_dol_freq_meses <- 12 / bc_dol_cup_x_ano
+bc_dol_cup_periodo <- (bc_dol_cupones / bc_dol_cup_x_ano) * bc_dol_valor
 ```
 
 - **Acciones Internacionales**: 350 acciones de una empresa tecnológica con precio actual de $130$ dólares por accción.
@@ -301,9 +303,191 @@ precios_dol_ramas_nominal[[1]]
 
 ## Simulación de Montecarlo
 
+Ahora se simulará la trayectoria de subidas y bajadas haciendo una cadena binomial con probabilidad $q=0.5$ y se van a contar la cantidad de subidas en cada tiempo y mediante este valor se tomará en cuenta lo siguiente
+
+$$
+d(T)=k^{T-1}u(T)
+$$
+Y con esto igualmente se simula la trayectoria. De este modo el nodo en el tiempo $t$ con $k$ subidas se calcula como
+
+$$
+P(t,T\mid \sum_{i=1}^T w_i = k) = \dfrac{u(T-t)^kd(T-t)^{t-k}P(0,T)}{P(0,t)} 
+$$
+
+```{r}
+simular_rutas <- function(T, n_sims){
+  rutas <- matrix(rbinom(n_sims*T, 1, 0.5), nrow = n_sims)
+  ups <- t(apply(rutas, 1, cumsum))
+  ups <- cbind(0, ups)
+  return(ups)
+}
+
+simular_bono_cuponado <- function(rama, ratio, n_sims){
+  T <- max(rama$t)
+  ups <- simular_rutas(T, n_sims)
+  valores_up <- rama$valor
+  sims <- matrix(0, n_sims, T+1)
+  
+  for(t in 0:T){
+    k <- ups[, t+1] 
+    downs <- t - k
+    
+    if(t == T){
+      sims[, t+1] <- valores_up[t+1]
+    } else {
+      sims[, t+1] <- valores_up[t+1] * ratio[T - t]^(downs)
+    }
+  }
+  
+  return(sims)
+}
+
+```
+
+```{r}
+ratio_col <- curva$d_col / curva$u_col
+ratio_dol <- curva$d_dol / curva$u_dol
+
+n_sims <- 10000
+
+simulaciones_crc_b0c <- lapply(
+  precios_crc_ramas_nominal,
+  function(rama) simular_bono_cuponado(rama, ratio_col, n_sims)
+)
+
+simulaciones_dol_b0c <- lapply(
+  precios_dol_ramas_nominal,
+  function(rama) simular_bono_cuponado(rama, ratio_dol, n_sims)
+)
+```
+
 # Bonos Cuponados
 
+Para los bonos cuponados primero se obtendrán los pagos por cada bono, pues los bonos cuponados se pueden ver como una suma de Bonos Cero Cupón de la siguiente manera
+
+$$
+P_{\text{cuponado}}(t)=\displaystyle{\sum_{S\in \lbrace \text{Pagos}\rbrace}H(S)P(t,S\mid w_u^t)}
+$$
+
+Así se define el flujo donde cada bono se da como $i*V_F$ sin embargo el valor final se da por $V_F(1+i)$ ya con esto se construye la rama superior de estos bonos
+
+```{r}
+rama_superior_bono_cuponado <- function(ramas_up, T, tasa_anual, pagos_por_anio, nominal, pasos_por_anio = 12) {
+  
+  paso_cupon <- pasos_por_anio / pagos_por_anio
+
+  paso_cupon <- as.integer(round(paso_cupon))
+  
+  pagos <- seq(from = paso_cupon, to = T, by = paso_cupon)
+
+  cup_por_pago <- nominal * tasa_anual / pagos_por_anio
+
+  cf <- rep(cup_por_pago, length(pagos))
+  cf[length(cf)] <- cf[length(cf)] + nominal
+  
+  vals <- numeric(T + 1)
+  movs <- character(T + 1)
+  
+  for (t in 0:T) {
+    movs[t + 1] <- if (t == 0) " " else paste0(rep("U", t), collapse = "")
+    
+    idx <- which(pagos >= (t + 1))
+    if (length(idx) == 0L) {
+      vals[t + 1] <- 0
+    } else {
+      S_vec  <- pagos[idx]
+      cf_vec <- cf[idx]
+      
+      P_tS <- mapply(function(S) ramas_up[[S]]$valor[t + 1], S_vec)
+      vals[t + 1] <- sum(cf_vec * P_tS)
+    }
+  }
+  
+  data.frame(
+    t = 0:T,
+    movimiento = movs,
+    valor = vals
+  )
+}
+```
+
+```{r}
+ramas_bonos_crc_bc <- Map(
+  f = function(T, tasa, freq, VN){
+    rama_superior_bono_cuponado(
+      ramas_up       = ramas_up_crc,
+      T              = T,
+      tasa_anual     = tasa,
+      pagos_por_anio = freq,
+      nominal        = VN,
+      pasos_por_anio = 12
+    )
+  },
+  T    = bc_crc_venc,
+  tasa = bc_crc_cupones,
+  freq = bc_crc_cup_x_ano,
+  VN   = bc_crc_valor
+)
+
+rama_bono_dol_bc <- rama_superior_bono_cuponado(
+  ramas_up       = ramas_up_dol,
+  T              = bc_dol_venc,
+  tasa_anual     = bc_dol_cupones,
+  pagos_por_anio = bc_dol_cup_x_ano,
+  nominal        = bc_dol_valor,
+  pasos_por_anio = 12
+)
+
+```
+
+
 ## Simulación de Montecarlo
+
+Siguiendo un procedimiento similar que en el caso de los bonos cero cupón
+
+```{r}
+simular_rutas <- function(T, n_sims){
+  rutas <- matrix(rbinom(n_sims*T, 1, 0.5), nrow = n_sims)
+  ups <- t(apply(rutas, 1, cumsum))
+  ups <- cbind(0, ups)
+  return(ups)
+}
+
+simular_bono_cuponado <- function(rama, ratio, n_sims){
+  
+  T <- max(rama$t)
+  ups <- simular_rutas(T, n_sims)
+  valores_up <- rama$valor
+  
+  sims <- matrix(0, n_sims, T+1)
+  
+  for(t in 0:T){
+    k <- ups[, t+1]      
+    downs <- t - k
+    
+    if(t == T){
+      sims[, t+1] <- valores_up[t+1]
+    } else {
+      sims[, t+1] <- valores_up[t+1] * ratio[T - t]^(downs)
+    }
+  }
+  
+  return(sims)
+}
+```
+
+```{r}
+n_sims <- 10000
+
+simulaciones_crc_bc <- lapply(
+  ramas_bonos_crc_bc,
+  function(rama) simular_bono_cuponado(rama, ratio_col, n_sims)
+)
+
+simulaciones_dol_bc <- list(
+  simular_bono_cuponado(rama_bono_dol_bc, ratio_dol, n_sims)
+)
+```
 
 # Acciones 
 
