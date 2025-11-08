@@ -1,0 +1,313 @@
+---
+title: "Simulación de Carteras de Inversiones"
+author: "CA0307 - Valoración de Instrumentos Financieros"
+lang: es
+date: today
+date-format: "D MMMM YYYY"
+freeze: auto
+
+crossref:
+  fig-prefix: ""   
+  tbl-prefix: ""   
+  eq-prefix: ""   
+format:
+  html:
+    theme:
+      light: lux
+      dark: darkly
+    toc: true
+    toc-title: "Contenido"
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    code-copy: true
+    code-fold: true
+    code-summary: "Mostrar/Ocultar código"
+    df-print: paged
+    smooth-scroll: true
+    embed-resources: true   
+    self-contained: true    
+    link-external-newwindow: true
+    link-external-icon: true
+    title-block-banner: "firebrick" 
+    page-layout: article
+    html-math-method: katex
+    
+execute:
+  warning: false
+  message: false
+---
+
+# Inicialización de la cartera
+
+Se nos dice que la empresa tiene inversiones tanto en colones como dólares compuestos por acciones, bonos cero cupón y bonos cuponados de la siguiente manera
+
+## Cartera en Colones
+
+- **Bonos Cero Cupón**: Cinco títulos con vencimiento a 2, 5, 10, 15 y 20 años, cada uno con valor nominal de $12.000.000$ colones.
+
+```{r}
+b0c_crc_venc <- c(48, 60, 120, 180, 240)
+b0c_crc_valor <- rep(12000000, length(b0c_crc_venc))
+```
+
+- **Bonos Cuponados**: Tres bonos corpoativos con cupones bimensuales, cuatrimenstrales y anuales del $4\%$, $6\%$ y $8.5\%$ respectivamente. Estos bonos tienen vencimientoas a 12, 15 y 18 años y valores nominales de $22.000.000$ colones cada uno.
+
+```{r}
+bc_crc_cup_x_ano <- c(6, 3, 1)
+bc_crc_cupones <- c(0.04, 0.06, 0.085)
+bc_crc_venc <- c(144, 180, 216)
+bc_crc_valor <- rep(22000000, length(bc_crc_venc))
+bc_crc_cupon_x_periodo <- (bc_crc_cupones / bc_crc_cup_x_ano) * bc_crc_valor
+```
+
+- **Acciones Locales**: 550 acciones de Nacional de Energía S.A., con precio actual de $25.000$ colones por acción.
+
+```{r}
+acc_crc_n <- 550
+acc_crc_precio_hoy <- 25000
+```
+
+## Cartera en Dólares
+
+- **Bonos Cero Cupón**: Tres títulos con vencimientos a 4, 12 y 17 años, valores nominales de $16.000$ dólares cada uno.
+
+```{r}
+b0c_dol_venc <- c(48, 144, 204)
+b0c_dol_valor <- rep(16000, length(b0c_dol_venc))
+```
+
+- **Bonos Cuponados**: Un bono internacional con cupón semestral del $4\%$, vencimiento a 16 años y valor nominal de $25.000$ dólares.
+
+```{r}
+bc_dol_cup_x_ano <- 2
+bc_dol_cupones <- 0.04
+bc_dol_venc <- 192
+bc_dol_valor <- 25000
+bc_dol_cupon_x_periodo <- (bc_dol_cupones / bc_dol_cup_x_ano) * bc_dol_valor
+```
+
+- **Acciones Internacionales**: 350 acciones de una empresa tecnológica con precio actual de $130$ dólares por accción.
+
+```{r}
+acc_dol_n <- 350
+acc_dol_precio_hoy <- 130
+```
+
+# Datos Necesarios (Curva Cero Cupón)
+
+Se tiene los datos de la curva cero cupón en colones y dólares para distintos vencimientos
+
+```{r}
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(readxl)
+curva <- read_excel('../../data/curva_cero_cupon.xlsx')
+colnames(curva) <- c('vencimiento', 'curva_colones', 'curva_dolares')
+head(curva)
+```
+
+Note que estos precios de los bonos cero cupón corresponden a $\rho(0,T)$ con $T$ el vencimiento. Es por esto que se debe aplicar una transformación para obtener el valor de $P(0,T)$, este se obtiene por medio de 
+
+$$
+P(t,T)=\left(1+\rho(t,T)\right)^{-\tau(t,T)}
+$$
+
+```{r}
+curva <- curva %>% 
+  mutate(
+    bono_colones = (1+curva_colones)^(-vencimiento),
+    bono_dolares = (1+curva_dolares)^(-vencimiento),
+    vencimiento = round(vencimiento*12,0)
+  )
+head(curva)
+```
+
+## Aspectos Importantes para los Árboles
+
+Para hacer los árboles binomiales para los bonos cero cupón y los cuponados es necesario tener la proporción de subida y de bajada así como la probabilidad neutral al riesgo $\mathbb{Q}$.
+
+Se nos da la siguiente información
+
+|            | $u(2)$   | $d(2)$    |
+|------------|:--------:|:---------:|
+| Colones    | 1.0002   | 0.9998    |
+| Dólares    | 1.00004  | 0.99996   |
+
+Así se sabe que la constante $k = \dfrac{d(2)}{u(2)}$ toma los siguientes valores
+
+|            | $k$   |
+|------------|:--------:|
+| Colones    | $0.99960007998$|
+| Dólares    | $0.9999200032$|
+
+Así con esta constante se puede obtener la probabilidad de subir o bajar en el árbol dada por
+
+$$
+q = \dfrac{1-d(T)}{u(T)-d(T)}
+$$
+
+lo cual da el siguiente resultado
+
+|            | $q_{u}$   | $q_{d}$    |
+|------------|:--------:|:---------:|
+| Colones    |   0.5 |  0.5   |
+| Dólares    |  0.5 |   0.5 |
+
+Así para ambas monedas se tiene la misma probabilidad de subir o bajar en el árbol por lo que se puede considerar la función $u(t)$ y $d(T)$ de la siguiente manera: 
+
+```{r}
+k_col <- 0.9998/1.0002
+k_dol <- 0.99996/1.00004
+q <- 0.5
+
+u <- function(T, k){
+  return(1/((1-q)*k^(T-1)+q))
+}
+d <- function(T, k){
+  return(k^(T-1)/((1-q)*k^(T-1)+q))
+}
+```
+
+Esto se puede incluir en la base de datos
+
+```{r}
+curva <- curva %>% 
+  mutate(
+    u_col = u(vencimiento, k_col),
+    d_col = d(vencimiento, k_col),
+    u_dol = u(vencimiento, k_dol),
+    d_dol = d(vencimiento, k_dol)
+  ) %>% select(-c('curva_colones', 'curva_dolares')) %>% slice(-1)
+head(curva)
+```
+
+
+Con esto es posible obtener los árboles para cada bono cero cupón.
+
+# Bonos Cero Cupón
+
+Para no tener diferentes resultados cada que se ejecutan las simulaciones, se tomará una semilla
+
+```{r}
+set.seed(2025)
+```
+
+Ahora con esto se obtendrá una matriz $B \times T$ para cada bono desde $T=2$ hasta $T=\displaystyle{\max_{i=1,...,n}\lbrace T_i\rbrace}$. Con esto se obtendrá para cada bono dos matrices
+
+- **Movimientos**: Matriz compuesta de $B\times T$ con valores $0$ o $1$ los cuales dicen cuales son los movimientos que toma la rama, es decir, cada $w_i$.
+- **Precios**: Matriz compueta de $B\times T$ con los valores de $P(t,T\mid w_1,...,w_t)$ para cada $t=0,...,T$.
+
+Además se guardará en una lista cada una de estas matrices para poder utilizarlo posteriormente.
+
+## Rama Principal
+
+Se calculará la rama donde todos los movimientos son ascendentes.
+
+Como base se utilizará el árbol $P(0,1)$ y luego se construyen recursivamente considerando que
+
+$$
+P(t,T\mid w_1=1,...,w_t=1) = u(T-t
++1) \cdot P_F(t-1,t,T \mid w_1=1,...,w_{t}=1) = u(T-t+1)] \cdot \dfrac{P(t-1,t \mid w_1=1,...,w_{t-1}=1)}{P(t-1,T\mid w_1=1,...,w_{t-1}=1)}
+$$
+
+```{r}
+construir_rama_superior <- function(P0, u, nominal = 1) {
+  
+  Tmax <- length(P0)
+  ramas_up <- vector("list", Tmax)
+  
+  # El caso base P(0,1)
+  ramas_up[[1]] <- data.frame(
+    t = 0:1,
+    movimiento = c(" ", "U"),
+    valor = c(P0[1], nominal)
+  )
+  
+  # La recurrencia para P(0,T) con T=1,...,T_max
+  for (T in 2:Tmax) {
+    vals <- numeric(T + 1)
+    movs <- character(T + 1)
+    
+    # Primer paso
+    vals[1] <- P0[T]
+    movs[1] <- " "
+    
+    # Demás Pasos
+    for (k in 1:(T - 1)) {
+      denom <- ramas_up[[k]]$valor[k]     # P(k-1,k | U^(k-1))
+      vals[k + 1] <- u[T - k + 1] * vals[k] / denom
+      movs[k + 1] <- paste0(rep("U", k), collapse = "")
+    }
+    
+    # Paso Final
+    vals[T + 1] <- nominal
+    movs[T + 1] <- paste0(rep("U", T), collapse = "")
+    
+    ramas_up[[T]] <- data.frame(t = 0:T, movimiento = movs, valor = vals)
+  }
+  
+  return(ramas_up)
+}
+```
+
+```{r}
+ramas_up_crc <- construir_rama_superior(
+  P0 = curva$bono_colones,
+  u  = curva$u_col,
+  nominal = 1
+)
+
+ramas_up_dol <- construir_rama_superior(
+  P0 = curva$bono_dolares,
+  u  = curva$u_dol,
+  nominal = 1
+)
+```
+
+```{r}
+precios_crc_ramas_nominal <- mapply(
+  FUN = function(rama, VN){
+    rama$valor <- rama$valor * VN
+    return(rama)
+  },
+  rama = ramas_up_crc[b0c_crc_venc],
+  VN   = b0c_crc_valor,
+  SIMPLIFY = FALSE
+)
+
+precios_dol_ramas_nominal <- mapply(
+  FUN = function(rama, VN){
+    rama$valor <- rama$valor * VN
+    return(rama)
+  },
+  rama = ramas_up_dol[b0c_dol_venc],
+  VN   = b0c_dol_valor,
+  SIMPLIFY = FALSE
+)
+```
+
+Algunos ejemplos para que los vean
+
+```{r}
+precios_crc_ramas_nominal[[1]]
+```
+
+```{r}
+precios_dol_ramas_nominal[[1]]
+```
+
+## Simulación de Montecarlo
+
+# Bonos Cuponados
+
+## Simulación de Montecarlo
+
+# Acciones 
+
+## Simulación de Montecarlo
+
+# Resultados Finales
+
